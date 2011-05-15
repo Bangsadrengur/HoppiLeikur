@@ -1,5 +1,7 @@
 var width = 320,
     height = 500,
+    points = 0,
+    state = true,
     gLoop,
     c = document.getElementById('c'),
     ctx = c.getContext('2d');
@@ -75,7 +77,27 @@ var player = new(function() {
     }
 
     that.checkJump = function() {
-        that.setPosition(that.X, that.Y - that.jumpSpeed);
+        // that.setPosition(that.X, that.Y - that.jumpSpeed);
+        if(that.Y > height * 0.4) {
+            that.setPosition(that.X, that.Y - that.jumpSpeed);
+        }
+        else {
+            if(that.jumpSpeed > 10) points++;
+            MoveCircles(that.jumpSpeed * 0.5);
+            platforms.forEach(function(platform, ind) {
+                platform.y += that.jumpSpeed;
+                if(platform.y > height) {
+                    var type = ~~(Math.random() * 5);
+                    if(type == 0) {
+                        type = 1;
+                    } 
+                    else { 
+                        type = 0;
+                    }
+                    platforms[ind] = new Platform(Math.random() * (width - platformWidth), platform.y - height, type);
+                }
+            });
+        }
         that.jumpSpeed--;
         if(that.jumpSpeed == 0) {
             that.isJumping = false;
@@ -89,8 +111,11 @@ var player = new(function() {
             that.setPosition(that.X, that.Y + that.fallSpeed);
             that.fallSpeed++;
         }
-        else {
+        else if (points == 0) {
             that.fallStop();
+        }
+        else {
+            GameOver();
         }
     }
 
@@ -153,6 +178,8 @@ var Platform = function(x, y, type) {
     that.x = ~~x;
     that.y = y;
     that.type = type;
+    that.isMoving = ~~(Math.random() * 2);
+    that.direction = ~~(Math.random() * 2) ? -1 : 1;
     that.draw = function() {
         ctx.fillStyle = 'rgba(255, 255, 255, 1)';
         var gradient = ctx.createRadialGradient(that.x + (platformWidth/2), that.y + (platformHeight/2), 5, 
@@ -211,11 +238,36 @@ var GameLoop = function() {
     DrawCircles();
     if(player.isJumping) player.checkJump();
     if(player.isFalling) player.checkFall();
-    platforms.forEach(function(platform) {
+    player.draw();
+    platforms.forEach(function(platform, index) {
+        if(platform.isMoving)  {
+            if(platform.x < 0) {
+                platform.direction = 1;
+            }
+            else if(platform.x > width - platformWidth) {
+                platform.direction = -1;
+            }
+            platform.x += platform.direction * (index / 2) * ~~(points / 100);
+        }
         platform.draw();
     });
     checkCollision();
-    player.draw();
-    gLoop = setTimeout(GameLoop, 1000 / 50);
+    ctx.fillStyle = "Black";
+    ctx.fillText("POINTS: " + points, 10, height-10);
+    if(state) {
+        gLoop = setTimeout(GameLoop, 1000 / 50);
+    }
 }
+
+var GameOver = function() {
+    state = false;
+    clearTimeout(gLoop);
+    setTimeout(function() {
+        clear();
+        ctx.fillStyle = "Black";
+        ctx.font = "10pt Arial";
+        ctx.fillText("GAME OVER", width / 2 - 60, height / 2 - 50);
+        ctx.fillText("YOUR RESULT: " + points, width /  2 - 60, height / 2 - 30);
+    }, 100);
+};
 GameLoop();
